@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Fluxos - Bot Texto Generativo (Sem Parar)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .var-highlight { background-color: #fef08a; color: #854d0e; padding: 1px 4px; border-radius: 4px; font-weight: 600; font-family: monospace; }
+        .flow-connector::before {
+            content: '';
+            position: absolute;
+            top: 40px;
+            bottom: -24px;
+            left: 20px;
+            width: 2px;
+            background-color: #cbd5e1;
+            z-index: 0;
+        }
+        .flow-step:last-child .flow-connector::before { display: none; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden text-slate-800">
+
+    <!-- SIDEBAR -->
+    <aside class="w-80 bg-slate-900 text-white flex flex-col shadow-xl z-20">
+        <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-rose-600 flex items-center justify-center font-bold text-lg shadow">
+                    SP
+                </div>
+                <div>
+                    <h1 class="font-bold text-sm tracking-wide">BOT TXT GEN</h1>
+                    <p class="text-xs text-slate-400">Assistente Virtual: Duda</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Busca e Novo Fluxo -->
+        <div class="p-4 space-y-3 border-b border-slate-800">
+            <button onclick="openNewFlowModal()" class="w-full py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition shadow-sm">
+                <i class="fas fa-plus"></i> Novo Cenário / Fluxo
+            </button>
+            <div class="relative">
+                <i class="fas fa-search absolute left-3 top-3 text-slate-400 text-xs"></i>
+                <input type="text" id="searchInput" onkeyup="renderSidebar()" placeholder="Buscar fluxo ou fala..." class="w-full bg-slate-800 text-sm text-white pl-8 pr-3 py-2 rounded-lg border border-slate-700 focus:outline-none focus:border-rose-500">
+            </div>
+        </div>
+
+        <!-- Lista de Fluxos -->
+        <div id="flowList" class="flex-1 overflow-y-auto p-3 space-y-1">
+            <!-- Preenchido via JS -->
+        </div>
+
+        <!-- Rodapé Sidebar (Backup/Reset) -->
+        <div class="p-3 border-t border-slate-800 bg-slate-950 flex justify-between items-center text-xs text-slate-400">
+            <button onclick="exportJSON()" class="hover:text-white flex items-center gap-1" title="Baixar backup dos fluxos">
+                <i class="fas fa-download"></i> Exportar JSON
+            </button>
+            <label class="hover:text-white flex items-center gap-1 cursor-pointer" title="Carregar arquivo JSON">
+                <i class="fas fa-upload"></i> Importar
+                <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
+            </label>
+            <button onclick="resetDefaultData()" class="hover:text-rose-400" title="Restaurar modelo original do PDF">
+                <i class="fas fa-undo"></i> Resetar
+            </button>
+        </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- Header do Fluxo Selecionado -->
+        <header id="mainHeader" class="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between shadow-sm">
+            <div>
+                <div class="flex items-center gap-3">
+                    <span id="flowCategoryBadge" class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-rose-100 text-rose-700">Negociação</span>
+                    <span id="stepCountBadge" class="text-xs text-slate-500 font-medium">4 etapas</span>
+                </div>
+                <h2 id="flowTitle" class="text-2xl font-bold text-slate-800 mt-1">1. Acordo à Vista</h2>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openEditFlowModal()" class="px-3 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+                    <i class="fas fa-edit mr-1"></i> Editar Fluxo
+                </button>
+                <button onclick="deleteCurrentFlow()" class="px-3 py-2 text-sm font-medium text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Conteúdo do Fluxograma -->
+        <div class="flex-1 overflow-y-auto p-8">
+            <div class="max-w-4xl mx-auto">
+                
+                <!-- Card de Observações / Regra de Negócio -->
+                <div id="observationBox" class="mb-8 bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg shadow-sm hidden">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-lightbulb text-amber-500 mt-0.5"></i>
+                        <div>
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-amber-800">Regra de Negócio / Observação</h4>
+                            <p id="observationText" class="text-sm text-amber-900 mt-1"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Container das Etapas do Fluxograma -->
+                <div id="stepsContainer" class="space-y-6">
+                    <!-- Preenchido via JS -->
+                </div>
+
+                <!-- Botão Adicionar Etapa no Final -->
+                <div class="mt-8 pl-14">
+                    <button onclick="openStepModal()" class="w-full py-4 border-2 border-dashed border-slate-300 hover:border-rose-500 hover:bg-rose-50/50 text-slate-500 hover:text-rose-600 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition">
+                        <i class="fas fa-plus-circle text-lg"></i> Adicionar Nova Etapa / Fala neste Fluxo
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL: ADICIONAR / EDITAR ETAPA -->
+    <div id="stepModal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                <h3 id="stepModalTitle" class="font-bold text-lg text-slate-800">Nova Etapa do Fluxo</h3>
+                <button onclick="closeStepModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="editStepIndex">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Título da Etapa (Ex: Confirmação Inicial)</label>
+                    <input type="text" id="stepTitleInput" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" placeholder="Ex: VALIDAÇÃO DE DADOS">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold uppercase text-slate-500">Fala da Assistente Virtual (Duda)</label>
+                        <span class="text-xs text-slate-400">Dica: Use [VALOR], [DD/MM] para variáveis</span>
+                    </div>
+                    <textarea id="stepSpeechInput" rows="6" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" placeholder="Digite exatamente o texto que a Duda deve enviar..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Gatilho / Condição de Saída (Opcional)</label>
+                    <input type="text" id="stepConditionInput" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" placeholder="Ex: Se cliente confirmar CPF -> Vai para etapa 2">
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="closeStepModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg">Cancelar</button>
+                <button onclick="saveStep()" class="px-4 py-2 text-sm font-medium bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow">Salvar Etapa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: NOVO / EDITAR FLUXO -->
+    <div id="flowModal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                <h3 id="flowModalTitle" class="font-bold text-lg text-slate-800">Criar Novo Cenário</h3>
+                <button onclick="closeFlowModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="isEditingFlow">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nome do Cenário / Fluxo (Numeração automática)</label>
+                    <input type="text" id="flowNameInput" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" placeholder="Ex: Negociação Boleto Vencido">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Categoria (Escolha ou digite uma nova)</label>
+                    <input list="categoriasSugestoes" id="flowCategoryInput" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" placeholder="Escolha ou digite uma categoria...">
+                    <datalist id="categoriasSugestoes">
+                        <option value="Negociação">
+                        <option value="Preventivo / Acordo">
+                        <option value="Alegação de Pagamento">
+                        <option value="Contestação / Retenção">
+                        <option value="Encerramento / Transbordo">
+                        <option value="Validação de Dados">
+                        <option value="Exceções / Erros">
+                    </datalist>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Observação / Regra de Negócio</label>
+                    <textarea id="flowObsInput" rows="3" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-rose-500" placeholder="Ex: Só acionar esse fluxo quando o cliente recusar a primeira oferta..."></textarea>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="closeFlowModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg">Cancelar</button>
+                <button onclick="saveFlow()" class="px-4 py-2 text-sm font-medium bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow">Salvar Cenário</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST DE NOTIFICAÇÃO -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 z-50">
+        <i class="fas fa-check-circle text-emerald-400"></i>
+        <span id="toastMsg">Fala copiada com sucesso!</span>
+    </div>
+
+    <script>
+        const defaultFlows = [
+            {
+                id: 'acordo-vista',
+                title: 'Acordo à Vista',
+                category: 'Negociação',
+                observation: 'Oferta principal de quitação com desconto via PIX. Desbloqueio da Tag ocorre em até 3 horas após compensação.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação + Validação de titularidade',
+                        speech: 'OI, TUDO BEM? EU SOU A DUDA, DA EQUIPE DO SEM PARAR. PRA GENTE SEGUIR, PRECISO QUE VOCÊ CONFIRME O SEU CPF OU CNPJ COMPLETO, POR FAVOR.'
+                    },
+                    {
+                        title: 'CONTEXTUALIZAÇÃO DA FATURA',
+                        condition: 'Após validação positiva do CPF/CNPJ',
+                        speech: 'PRONTO! CONSTA [X] FATURAS EM ATRASO, NO VALOR DE R$ [VALOR]. O VENCIMENTO FOI EM [DD/MM/AA], TOTALIZANDO [X] DIAS DE ATRASO.\n\nCONSEGUI UMA CONDIÇÃO ESPECIAL PARA FACILITAR A QUITAÇÃO:\nR$ [VALOR] À VISTA COM DESCONTO.\n\nPOSSO ENVIAR ESSA PROPOSTA?'
+                    },
+                    {
+                        title: 'CONFIRMAÇÃO EM DUAS ETAPAS',
+                        condition: 'Cliente aceita receber a proposta',
+                        speech: 'A PROPOSTA É À VISTA, NO VALOR DE R$ [VALOR], COM VENCIMENTO EM [DD/MM], VIA PIX. POSSO REGISTRAR O ACORDO NESSAS CONDIÇÕES?'
+                    },
+                    {
+                        title: 'ENVIO DO PIX + INSTRUÇÕES DE PAGAMENTO',
+                        condition: 'Cliente confirma o registro do acordo',
+                        speech: 'PRONTO! SEU ACORDO FOI FORMALIZADO COM SUCESSO NO VALOR DE R$ [VALOR], COM VENCIMENTO EM [DD/MM].\n\nANTES DE FINALIZAR O PAGAMENTO, CONFIRA SE O BENEFICIÁRIO É SEM PARAR INSTITUIÇÃO DE PAGAMENTO LTDA E VERIFIQUE SE TODOS OS DADOS APRESENTADOS ESTÃO CORRETOS.\n\nA SUA TAG SERÁ DESBLOQUEADA EM ATÉ 3 HORAS APÓS A CONFIRMAÇÃO DO PAGAMENTO, JUNTAMENTE COM A COBRANÇA DA MENSALIDADE ATIVA, CONFORME O SEU PLANO.\n\nATENÇÃO: UTILIZE O BOTÃO "COPIA E COLA" ENVIADO ABAIXO OU REALIZE O PAGAMENTO PELO SUPERAPP SEM PARAR. NÃO REALIZE TRANSFERÊNCIA DIRETA PARA O CNPJ INFORMADO, POIS ISSO PODERÁ IMPEDIR A IDENTIFICAÇÃO AUTOMÁTICA DO PAGAMENTO.'
+                    }
+                ]
+            },
+            {
+                id: 'acordo-parcelado',
+                title: 'Acordo Parcelado',
+                category: 'Negociação',
+                observation: 'O parcelamento só é ofertado em caso de recusa do pagamento à vista, ou caso o cliente solicite a simulação. A Tag só desbloqueia após quitação total.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação + Validação de titularidade',
+                        speech: 'OI, TUDO BEM? EU SOU A DUDA, DA EQUIPE DO SEM PARAR. PRA GENTE SEGUIR, PRECISO QUE VOCÊ CONFIRME O SEU CPF OU CNPJ COMPLETO, POR FAVOR.'
+                    },
+                    {
+                        title: 'CONTEXTUALIZAÇÃO DA FATURA (PARCELADO)',
+                        condition: 'Cliente recusou à vista ou pediu parcelamento',
+                        speech: 'PARA PAGAMENTO EM [X] PARCELAS, A ENTRADA FICA EM R$ [VALOR], COM VENCIMENTO EM [DD/MM/AAAA], E AS DUAS PARCELAS SEGUINTES FICAM EM R$ [VALOR] CADA, NOS MESES SEGUINTES, TOTALIZANDO R$ [VALOR]. O PAGAMENTO SERÁ NO PIX.\n\nPODEMOS SEGUIR COM ESSA CONDIÇÃO?'
+                    },
+                    {
+                        title: 'CONFIRMAÇÃO EM DUAS ETAPAS',
+                        condition: 'Cliente aceita a simulação parcelada',
+                        speech: 'A CONDIÇÃO FICA EM [X] PARCELAS NO PIX: ENTRADA DE R$ [VALOR], COM VENCIMENTO EM [DD/MM], E MAIS DUAS PARCELAS DE R$ [VALOR] CADA. POSSO REGISTRAR O ACORDO NESSAS CONDIÇÕES?'
+                    },
+                    {
+                        title: 'ENVIO DO PIX + INSTRUÇÕES DE PAGAMENTO',
+                        condition: 'Cliente confirma o registro do parcelamento',
+                        speech: 'PRONTO! SEU ACORDO FOI FORMALIZADO COM SUCESSO NO VALOR DE R$ [VALOR], COM VENCIMENTO EM [DD/MM].\n\nANTES DE FINALIZAR O PAGAMENTO, CONFIRA SE O BENEFICIÁRIO É SEM PARAR INSTITUIÇÃO DE PAGAMENTO LTDA E VERIFIQUE SE TODOS OS DADOS APRESENTADOS ESTÃO CORRETOS.\n\nA SUA TAG SERÁ DESBLOQUEADA SOMENTE APÓS A QUITAÇÃO TOTAL DO ACORDO PARCELADO, JUNTAMENTE COM A COBRANÇA DA MENSALIDADE ATIVA, CONFORME O SEU PLANO.\n\nATENÇÃO: UTILIZE O BOTÃO "COPIA E COLA" ENVIADO ABAIXO OU REALIZE O PAGAMENTO PELO SUPERAPP SEM PARAR. NÃO REALIZE TRANSFERÊNCIA DIRETA PARA O CNPJ INFORMADO, POIS ISSO PODERÁ IMPEDIR A IDENTIFICAÇÃO AUTOMÁTICA DO PAGAMENTO.'
+                    }
+                ]
+            },
+            {
+                id: 'preventivo',
+                title: 'Preventivo (Acordo Vigente)',
+                category: 'Preventivo / Acordo',
+                observation: 'Acionado quando o cliente já possui um acordo ativo dentro do prazo de vencimento e precisa da 2ª via do código PIX.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação + Validação',
+                        speech: 'OI, TUDO BEM? EU SOU A DUDA, DA EQUIPE DO SEM PARAR. PRA GENTE SEGUIR, PRECISO QUE VOCÊ CONFIRME O SEU CPF OU CNPJ COMPLETO, POR FAVOR.'
+                    },
+                    {
+                        title: 'CONTEXTUALIZAÇÃO DO ACORDO',
+                        condition: 'Sistema identifica acordo ativo em aberto',
+                        speech: 'VOCÊ TEM UM ACORDO EM ABERTO DE R$ [VALOR], À VISTA, COM VENCIMENTO EM [DD/MM]. VOCÊ RECEBEU OS DADOS PARA PAGAMENTO DO ACORDO?'
+                    },
+                    {
+                        title: 'CONFIRMAÇÃO DO ENVIO',
+                        condition: 'Cliente informa que não recebeu ou pede reenvio',
+                        speech: 'É IMPORTANTE PAGAR ATÉ [DD/MM] PARA NÃO PERDER O DESCONTO APLICADO. VOU REENVIAR OS DADOS PARA PAGAMENTO PELO WHATSAPP. POSSO ENVIAR AGORA?'
+                    },
+                    {
+                        title: 'ENVIO DO PIX + INSTRUÇÕES DE PAGAMENTO',
+                        condition: 'Cliente confirma reenvio',
+                        speech: 'PRONTO! ENVIEI OS DADOS PARA PAGAMENTO DO SEU ACORDO.\n\nATENÇÃO: UTILIZE O BOTÃO "COPIA E COLA" ENVIADO OU REALIZE O PAGAMENTO PELO SUPERAPP SEM PARAR. NÃO REALIZE TRANSFERÊNCIA DIRETA PARA O CNPJ INFORMADO, POIS ISSO PODERÁ IMPEDIR A IDENTIFICAÇÃO AUTOMÁTICA DO PAGAMENTO.\n\nA SUA TAG SERÁ DESBLOQUEADA EM ATÉ 3 HORAS APÓS A CONFIRMAÇÃO DO PAGAMENTO, JUNTAMENTE COM A COBRANÇA DA MENSALIDADE ATIVA, CONFORME O SEU PLANO.\n\nCONFIRA SE O BENEFICIÁRIO É SEM PARAR INSTITUIÇÃO DE PAGAMENTO LTDA ANTES DE PAGAR. ATÉ MAIS!'
+                    }
+                ]
+            },
+            {
+                id: 'quebra-acordo',
+                title: 'Quebra de Acordo Vigente',
+                category: 'Preventivo / Acordo',
+                observation: 'Após o cliente aceitar a quebra do acordo, o cliente volta ao fluxo de negociação onde pode simular o vencimento à prazo ou até mesmo um parcelamento.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação + Validação',
+                        speech: 'OI, TUDO BEM? EU SOU A DUDA, DA EQUIPE DO SEM PARAR. PRA GENTE SEGUIR, PRECISO QUE VOCÊ CONFIRME O SEU CPF OU CNPJ COMPLETO, POR FAVOR.'
+                    },
+                    {
+                        title: 'CONTEXTUALIZAÇÃO DO ACORDO',
+                        condition: 'Identificado acordo vigente',
+                        speech: 'VOCÊ TEM UM ACORDO EM ABERTO DE R$ [VALOR], À VISTA, COM VENCIMENTO EM [DD/MM]. VOCÊ RECEBEU OS DADOS PARA PAGAMENTO DO ACORDO?'
+                    },
+                    {
+                        title: 'CANCELAMENTO DO ACORDO',
+                        condition: 'Cliente solicita nova data ou nova condição',
+                        speech: 'PARA FAZER UMA NOVA NEGOCIAÇÃO, PRECISO CANCELAR O ACORDO ATUAL. POSSO CANCELAR O ACORDO ATUAL?'
+                    },
+                    {
+                        title: 'ENVIO DE NOVA PROPOSTA',
+                        condition: 'Cliente autoriza cancelamento do acordo anterior',
+                        speech: 'O ACORDO ANTERIOR FOI CANCELADO. PARA QUITAR A FATURA EM ABERTO, A NOVA PROPOSTA É DE R$ [VALOR] À VISTA, COM VENCIMENTO EM [DD/MM]. PODEMOS SEGUIR COM ESSA CONDIÇÃO?'
+                    },
+                    {
+                        title: 'ENVIO DO PIX + INSTRUÇÕES DE PAGAMENTO',
+                        condition: 'Cliente aceita a nova proposta',
+                        speech: 'PRONTO! ENVIEI OS DADOS PARA PAGAMENTO DO SEU ACORDO.\n\nATENÇÃO: UTILIZE O BOTÃO "COPIA E COLA" ENVIADO OU REALIZE O PAGAMENTO PELO SUPERAPP SEM PARAR. NÃO REALIZE TRANSFERÊNCIA DIRETA PARA O CNPJ INFORMADO, POIS ISSO PODERÁ IMPEDIR A IDENTIFICAÇÃO AUTOMÁTICA DO PAGAMENTO.'
+                    }
+                ]
+            },
+            {
+                id: 'alega-pagamento-menor-5',
+                title: 'Alega Pagamento (< 5 dias úteis)',
+                category: 'Alegação de Pagamento',
+                observation: 'Cenário onde o pagamento foi feito recentemente e ainda está dentro da janela de compensação bancária de 5 dias úteis. Encerra sem transbordo.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação + Validação',
+                        speech: 'OI, TUDO BEM? EU SOU A DUDA, DA EQUIPE DO SEM PARAR. PRA GENTE SEGUIR, PRECISO QUE VOCÊ CONFIRME O SEU CPF OU CNPJ COMPLETO, POR FAVOR.'
+                    },
+                    {
+                        title: 'CONTEXTUALIZAÇÃO DA FATURA',
+                        condition: 'Apresentação da dívida ativa no sistema',
+                        speech: 'PRONTO! CONSTA [X] FATURAS EM ATRASO, NO VALOR DE R$ [VALOR]. O VENCIMENTO FOI EM [DD/MM/AA], TOTALIZANDO [X] DIAS DE ATRASO.\n\nCONSEGUI UMA CONDIÇÃO ESPECIAL PARA FACILITAR A QUITAÇÃO:\nR$ [VALOR] À VISTA COM DESCONTO.\n\nPOSSO ENVIAR ESSA PROPOSTA?'
+                    },
+                    {
+                        title: 'CONFIRMAÇÃO DO PAGAMENTO',
+                        condition: 'Cliente responde informando que já pagou',
+                        speech: 'ENTENDI. VOCÊ FEZ O PAGAMENTO NOS ÚLTIMOS CINCO DIAS ÚTEIS?'
+                    },
+                    {
+                        title: 'INSTRUÇÕES DA BAIXA DE PAGAMENTO',
+                        condition: 'Cliente confirma que pagou há menos de 5 dias úteis',
+                        speech: 'O PROCESSAMENTO DO PAGAMENTO PODE LEVAR ATÉ 5 DIAS ÚTEIS. VOCÊ PODE ACOMPANHAR PELO SUPERAPP SEM PARAR, NA SEÇÃO \'FINANÇAS\' OU \'FATURA\'. ASSIM QUE CONSTAR COMO REGULARIZADO, ESTARÁ TUDO CERTO. OBRIGADA PELO CONTATO E ATÉ MAIS!'
+                    }
+                ]
+            },
+            {
+                id: 'alega-pagamento-maior-5',
+                title: 'Alega Pagamento (> 5 dias úteis / Transbordo)',
+                category: 'Alegação de Pagamento',
+                observation: 'Quando o cliente informa uma data específica ou pagamento fora do prazo padrão de baixa, o Bot encaminha para verificação humana (ATH).',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação + Validação',
+                        speech: 'OI, TUDO BEM? EU SOU A DUDA, DA EQUIPE DO SEM PARAR. PRA GENTE SEGUIR, PRECISO QUE VOCÊ CONFIRME O SEU CPF OU CNPJ COMPLETO, POR FAVOR.'
+                    },
+                    {
+                        title: 'CONTEXTUALIZAÇÃO DA FATURA',
+                        condition: 'Apresentação da dívida',
+                        speech: 'PRONTO! CONSTA [X] FATURAS EM ATRASO, NO VALOR DE R$ [VALOR]. O VENCIMENTO FOI EM [DD/MM/AA], TOTALIZANDO [X] DIAS DE ATRASO.\n\nCONSEGUI UMA CONDIÇÃO ESPECIAL PARA FACILITAR A QUITAÇÃO:\nR$ [VALOR] À VISTA COM DESCONTO.\n\nPOSSO ENVIAR ESSA PROPOSTA?'
+                    },
+                    {
+                        title: 'CONFIRMAÇÃO DO PAGAMENTO',
+                        condition: 'Cliente alega pagamento já efetuado',
+                        speech: 'ENTENDI. VOCÊ FEZ O PAGAMENTO NOS ÚLTIMOS CINCO DIAS ÚTEIS?'
+                    },
+                    {
+                        title: 'ENCAMINHAMENTO PARA VERIFICAÇÃO (FILA ATH)',
+                        condition: 'Cliente informa data anterior a 5 dias úteis (ex: 30 de outubro)',
+                        speech: 'VOU ENCAMINHAR SEU ATENDIMENTO PARA VERIFICAREM O PAGAMENTO REALIZADO EM [DATA INFORMADA] E AJUDAREM VOCÊ COM A FATURA EM ABERTO.\n\nOLÁ! TUDO BEM? VOCÊ ESTÁ NA FILA DE ESPERA PARA ATENDIMENTO. POR FAVOR, AGUARDE UM MOMENTO E LOGO ESTAREMOS COM VOCÊ.'
+                    }
+                ]
+            },
+            {
+                id: 'transferencia-ath',
+                title: 'Transferência para ATH (Retenção)',
+                category: 'Encerramento / Transbordo',
+                observation: 'O cliente só é transferido para um ATH após a segunda solicitação por parte do cliente. Na primeira ele faz uma retenção para o cliente permanecer no atendimento com o Bot.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação + Validação',
+                        speech: 'OI, TUDO BEM? EU SOU A DUDA, DA EQUIPE DO SEM PARAR. PRA GENTE SEGUIR, PRECISO QUE VOCÊ CONFIRME O SEU CPF OU CNPJ COMPLETO, POR FAVOR.'
+                    },
+                    {
+                        title: 'CONTEXTUALIZAÇÃO DA FATURA',
+                        condition: 'Apresentação da oferta',
+                        speech: 'PRONTO! CONSTA [X] FATURAS EM ATRASO, NO VALOR DE R$ [VALOR]. O VENCIMENTO FOI EM [DD/MM/AA], TOTALIZANDO [X] DIAS DE ATRASO.\n\nCONSEGUI UMA CONDIÇÃO ESPECIAL PARA FACILITAR A QUITAÇÃO:\nR$ [VALOR] À VISTA COM DESCONTO.\n\nPOSSO ENVIAR ESSA PROPOSTA?'
+                    },
+                    {
+                        title: 'RETENÇÃO NO ATENDIMENTO (1º Pedido de Humano)',
+                        condition: 'Cliente pede para falar com atendente pela 1ª vez',
+                        speech: 'CONSIGO AJUDAR COM A MAIORIA DOS ASSUNTOS POR AQUI. POSSO TE MOSTRAR DE NOVO A CONDIÇÃO PARA REGULARIZAR A SUA FATURA?'
+                    },
+                    {
+                        title: 'TRANSFERÊNCIA PARA ATENDENTE HUMANO (2º Pedido)',
+                        condition: 'Cliente insiste em falar com humano pela 2ª vez',
+                        speech: 'CERTO, VOU TRANSFERIR VOCÊ PARA UMA PESSOA DA EQUIPE.\n\nOLÁ! TUDO BEM? VOCÊ ESTÁ NA FILA DE ESPERA PARA ATENDIMENTO. POR FAVOR, AGUARDE UM MOMENTO E LOGO ESTAREMOS COM VOCÊ.'
+                    }
+                ]
+            },
+            {
+                id: 'falecimento',
+                title: 'Falecimento do Titular',
+                category: 'Encerramento / Transbordo',
+                observation: 'Encerramento imediato com empatia e registro no sistema sem ofertar cobrança.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação + Validação',
+                        speech: 'OI, TUDO BEM? EU SOU A DUDA, DA EQUIPE DO SEM PARAR. PRA GENTE SEGUIR, PRECISO QUE VOCÊ CONFIRME O SEU CPF OU CNPJ COMPLETO, POR FAVOR.'
+                    },
+                    {
+                        title: 'FINALIZAÇÃO COM EMPATIA',
+                        condition: 'Interlocutor informa falecimento do titular',
+                        speech: 'SINTO MUITO PELA SUA PERDA. VOU REGISTRAR ESSA INFORMAÇÃO NO SISTEMA E ENCERRAR O ATENDIMENTO POR AQUI. MEUS SENTIMENTOS A VOCÊ E À FAMÍLIA.'
+                    }
+                ]
+            },
+            {
+                id: 'desconhece',
+                title: 'Desconhece o Titular',
+                category: 'Encerramento / Transbordo',
+                observation: 'Encerramento imediato por terceiros / número errado.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação + Validação',
+                        speech: 'OI, TUDO BEM? EU SOU A DUDA, DA EQUIPE DO SEM PARAR. PRA GENTE SEGUIR, PRECISO QUE VOCÊ CONFIRME O SEU CPF OU CNPJ COMPLETO, POR FAVOR.'
+                    },
+                    {
+                        title: 'FINALIZAÇÃO COM EMPATIA',
+                        condition: 'Pessoa informa não conhecer o titular',
+                        speech: 'ENTENDI. COMO VOCÊ NÃO RECONHECE O TITULAR, VOU ENCERRAR O ATENDIMENTO POR AQUI. ATÉ MAIS!'
+                    }
+                ]
+            },
+            {
+                id: 'contestacao',
+                title: 'Cenários de Contestação e Retenção',
+                category: 'Contestação / Retenção',
+                observation: 'O objetivo do Bot é sempre realizar a retenção do cliente, sem que haja a necessidade da transferência para um ATH (exceto se não reconhecer a cobrança).',
+                steps: [
+                    {
+                        title: 'CENÁRIO A: CLIENTE ALEGA QUE JÁ FEZ O CANCELAMENTO',
+                        condition: 'Contorno de objeção + Retomada de oferta',
+                        speech: 'ENTENDI. O CANCELAMENTO DO SERVIÇO NÃO INTERFERE NAS FATURAS GERADAS ENQUANTO O CONTRATO ESTAVA ATIVO. A FATURA EM ABERTO PERMANECE VINCULADA AO SEU CPF E ESTÁ DISPONÍVEL PARA REGULARIZAÇÃO.\n\nPOSSO TE MOSTRAR DE NOVO A CONDIÇÃO PARA REGULARIZAR A SUA FATURA?'
+                    },
+                    {
+                        title: 'CENÁRIO B: CLIENTE ALEGA QUE QUER CANCELAR',
+                        condition: 'Argumentação de benefícios + Direcionamento',
+                        speech: 'ENTENDO SEU PEDIDO. COM O SEM PARAR, VOCÊ TEM MAIS COMODIDADE NOS PEDÁGIOS, SEM PRECISAR PARAR PARA PAGAR. TAMBÉM PODE ACESSAR ESTACIONAMENTOS PARCEIROS COM MAIS FACILIDADE.\n\nO CANCELAMENTO DO SERVIÇO É FEITO EXCLUSIVAMENTE PELA CENTRAL DE ATENDIMENTO. POR AQUI, POSSO AJUDAR COM A REGULARIZAÇÃO DA FATURA EM ABERTO. A CONDIÇÃO ATUAL É DE R$ [VALOR], COM VENCIMENTO EM [DD/MM].\n\nPOSSO TE MOSTRAR DE NOVO A CONDIÇÃO PARA REGULARIZAR A SUA FATURA?'
+                    },
+                    {
+                        title: 'CENÁRIO C: CLIENTE ALEGA QUE NÃO USOU O SERVIÇO (1ª vez)',
+                        condition: 'Reforço de vínculo contratual',
+                        speech: 'ENTENDO. AINDA ASSIM, A FATURA EM ABERTO CONSTA VINCULADA AO SEU CPF NO SISTEMA.\n\nPOSSO TE MOSTRAR DE NOVO A CONDIÇÃO PARA REGULARIZAR A SUA FATURA?'
+                    },
+                    {
+                        title: 'CENÁRIO D: NÃO RECONHECE A COBRANÇA (Transbordo ATH)',
+                        condition: 'Cliente insiste que não reconhece a fatura/serviço',
+                        speech: 'ENTENDO QUE VOCÊ NÃO RECONHECE ESSA FATURA EM ABERTO. VOU ENCAMINHAR SEU ATENDIMENTO PARA UMA PESSOA DA EQUIPE VERIFICAR ESSA COBRANÇA COM VOCÊ.\n\nOLÁ! TUDO BEM? VOCÊ ESTÁ NA FILA DE ESPERA PARA ATENDIMENTO. POR FAVOR, AGUARDE UM MOMENTO E LOGO ESTAREMOS COM VOCÊ.'
+                    }
+                ]
+            }
+        ];
+
+        // ESTADO DA APLICAÇÃO
+        let flows = JSON.parse(localStorage.getItem('semparar_bot_flows')) || defaultFlows;
+        let currentFlowId = flows[0]?.id || null;
+
+        function saveToStorage() {
+            localStorage.setItem('semparar_bot_flows', JSON.stringify(flows));
+        }
+
+        // NUMERAÇÃO SEQUENCIAL AUTOMÁTICA
+        function getFormattedFlowTitle(flow, index) {
+            const cleanTitle = flow.title.replace(/^\d+\.\s*/, '');
+            return `${index + 1}. ${cleanTitle}`;
+        }
+
+        // MOVER ORDEM DOS CENÁRIOS
+        function moveFlow(event, index, direction) {
+            event.stopPropagation();
+            const targetIndex = index + direction;
+            if (targetIndex < 0 || targetIndex >= flows.length) return;
+            const temp = flows[index];
+            flows[index] = flows[targetIndex];
+            flows[targetIndex] = temp;
+            saveToStorage();
+            renderAll();
+        }
+
+        // FORMATAÇÃO DE VARIÁVEIS NA FALA
+        function formatSpeech(text) {
+            let escaped = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            return escaped.replace(/(\[.*?\])/g, '<span class="var-highlight">$1</span>').replace(/\n/g, '<br>');
+        }
+
+        // RENDERIZAR SIDEBAR
+        function renderSidebar() {
+            const list = document.getElementById('flowList');
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            list.innerHTML = '';
+
+            flows.forEach((flow, index) => {
+                const numberedTitle = getFormattedFlowTitle(flow, index);
+                const matchTitle = numberedTitle.toLowerCase().includes(query);
+                const matchSpeech = flow.steps.some(s => s.speech.toLowerCase().includes(query) || s.title.toLowerCase().includes(query));
+                
+                if (matchTitle || matchSpeech) {
+                    const isActive = flow.id === currentFlowId;
+                    const btn = document.createElement('div');
+                    btn.onclick = () => { currentFlowId = flow.id; renderAll(); };
+                    btn.className = `w-full cursor-pointer text-left px-3 py-2.5 rounded-lg text-sm transition flex items-center justify-between group ${
+                        isActive ? 'bg-rose-600 text-white font-semibold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`;
+                    btn.innerHTML = `
+                        <span class="truncate pr-2 flex-1">${numberedTitle}</span>
+                        <div class="flex items-center gap-1">
+                            <div class="hidden group-hover:flex flex-col mr-1">
+                                <button onclick="moveFlow(event, ${index}, -1)" class="text-[10px] leading-none hover:text-amber-300 ${index === 0 ? 'opacity-30 pointer-events-none' : ''}" title="Subir"><i class="fas fa-chevron-up"></i></button>
+                                <button onclick="moveFlow(event, ${index}, 1)" class="text-[10px] leading-none hover:text-amber-300 ${index === flows.length - 1 ? 'opacity-30 pointer-events-none' : ''}" title="Descer"><i class="fas fa-chevron-down"></i></button>
+                            </div>
+                            <span class="text-xs px-1.5 py-0.5 rounded ${isActive ? 'bg-rose-700 text-rose-100' : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700'}">${flow.steps.length}</span>
+                        </div>
+                    `;
+                    list.appendChild(btn);
+                }
+            });
+        }
+
+        // RENDERIZAR FLUXO PRINCIPAL
+        function renderMain() {
+            const flowIndex = flows.findIndex(f => f.id === currentFlowId);
+            const flow = flows[flowIndex];
+            if (!flow) return;
+
+            document.getElementById('flowTitle').innerText = getFormattedFlowTitle(flow, flowIndex);
+            document.getElementById('flowCategoryBadge').innerText = flow.category || 'Geral';
+            document.getElementById('stepCountBadge').innerText = `${flow.steps.length} etapa(s)`;
+
+            const obsBox = document.getElementById('observationBox');
+            if (flow.observation && flow.observation.trim() !== '') {
+                obsBox.classList.remove('hidden');
+                document.getElementById('observationText').innerText = flow.observation;
+            } else {
+                obsBox.classList.add('hidden');
+            }
+
+            const container = document.getElementById('stepsContainer');
+            container.innerHTML = '';
+
+            flow.steps.forEach((step, index) => {
+                const stepEl = document.createElement('div');
+                stepEl.className = 'flow-step relative flex gap-4';
+                stepEl.innerHTML = `
+                    <div class="flow-connector relative flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-slate-800 text-white font-bold flex items-center justify-center shadow-md z-10 relative border-4 border-slate-100">
+                            ${index + 1}
+                        </div>
+                    </div>
+
+                    <div class="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition overflow-hidden">
+                        <div class="px-5 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h3 class="font-bold text-sm text-slate-800 tracking-wide">${step.title}</h3>
+                                ${step.condition ? `<p class="text-xs text-slate-500 mt-0.5"><i class="fas fa-code-branch text-rose-500 mr-1"></i> ${step.condition}</p>` : ''}
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="copySpeech(${index})" class="px-2.5 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-md transition flex items-center gap-1" title="Copiar fala da Duda">
+                                    <i class="far fa-copy"></i> Copiar Fala
+                                </button>
+                                <button onclick="openStepModal(${index})" class="p-1.5 text-slate-400 hover:text-blue-600 rounded-md transition" title="Editar etapa">
+                                    <i class="fas fa-pen text-xs"></i>
+                                </button>
+                                <button onclick="deleteStep(${index})" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-md transition" title="Excluir etapa">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="p-5 bg-white">
+                            <div class="flex items-start gap-3">
+                                <div class="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0 mt-1">
+                                    <i class="fas fa-robot text-sm"></i>
+                                </div>
+                                <div class="flex-1 bg-slate-50 border border-slate-200/80 rounded-2xl rounded-tl-none p-4 text-sm text-slate-700 leading-relaxed">
+                                    ${formatSpeech(step.speech)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(stepEl);
+            });
+        }
+
+        function renderAll() {
+            renderSidebar();
+            renderMain();
+        }
+
+        function copySpeech(stepIndex) {
+            const flow = flows.find(f => f.id === currentFlowId);
+            const text = flow.steps[stepIndex].speech;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Fala da Duda copiada para a área de transferência!');
+            });
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        // MODAIS DE ETAPA
+        function openStepModal(stepIndex = null) {
+            const modal = document.getElementById('stepModal');
+            const flow = flows.find(f => f.id === currentFlowId);
+            
+            if (stepIndex !== null) {
+                const step = flow.steps[stepIndex];
+                document.getElementById('stepModalTitle').innerText = 'Editar Etapa';
+                document.getElementById('editStepIndex').value = stepIndex;
+                document.getElementById('stepTitleInput').value = step.title;
+                document.getElementById('stepSpeechInput').value = step.speech;
+                document.getElementById('stepConditionInput').value = step.condition || '';
+            } else {
+                document.getElementById('stepModalTitle').innerText = 'Adicionar Nova Etapa';
+                document.getElementById('editStepIndex').value = '';
+                document.getElementById('stepTitleInput').value = '';
+                document.getElementById('stepSpeechInput').value = '';
+                document.getElementById('stepConditionInput').value = '';
+            }
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeStepModal() {
+            const modal = document.getElementById('stepModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function saveStep() {
+            const title = document.getElementById('stepTitleInput').value.trim();
+            const speech = document.getElementById('stepSpeechInput').value.trim();
+            const condition = document.getElementById('stepConditionInput').value.trim();
+            const editIndex = document.getElementById('editStepIndex').value;
+
+            if (!title || !speech) {
+                alert('Preencha o título da etapa e a fala da assistente!');
+                return;
+            }
+
+            const flow = flows.find(f => f.id === currentFlowId);
+            const stepData = { title: title.toUpperCase(), speech, condition };
+
+            if (editIndex !== '') {
+                flow.steps[parseInt(editIndex)] = stepData;
+                showToast('Etapa atualizada com sucesso!');
+            } else {
+                flow.steps.push(stepData);
+                showToast('Nova etapa adicionada ao fluxo!');
+            }
+
+            saveToStorage();
+            closeStepModal();
+            renderAll();
+        }
+
+        function deleteStep(index) {
+            if (confirm('Deseja realmente excluir esta etapa do fluxograma?')) {
+                const flow = flows.find(f => f.id === currentFlowId);
+                flow.steps.splice(index, 1);
+                saveToStorage();
+                renderAll();
+                showToast('Etapa removida.');
+            }
+        }
+
+        // MODAIS DE FLUXO
+        function openNewFlowModal() {
+            document.getElementById('flowModalTitle').innerText = 'Criar Novo Cenário / Fluxo';
+            document.getElementById('isEditingFlow').value = 'false';
+            document.getElementById('flowNameInput').value = '';
+            document.getElementById('flowCategoryInput').value = '';
+            document.getElementById('flowObsInput').value = '';
+            document.getElementById('flowModal').classList.remove('hidden');
+            document.getElementById('flowModal').classList.add('flex');
+        }
+
+        function openEditFlowModal() {
+            const flow = flows.find(f => f.id === currentFlowId);
+            document.getElementById('flowModalTitle').innerText = 'Editar Informações do Cenário';
+            document.getElementById('isEditingFlow').value = 'true';
+            document.getElementById('flowNameInput').value = flow.title.replace(/^\d+\.\s*/, '');
+            document.getElementById('flowCategoryInput').value = flow.category;
+            document.getElementById('flowObsInput').value = flow.observation || '';
+            document.getElementById('flowModal').classList.remove('hidden');
+            document.getElementById('flowModal').classList.add('flex');
+        }
+
+        function closeFlowModal() {
+            document.getElementById('flowModal').classList.add('hidden');
+            document.getElementById('flowModal').classList.remove('flex');
+        }
+
+        function saveFlow() {
+            const rawTitle = document.getElementById('flowNameInput').value.trim().replace(/^\d+\.\s*/, '');
+            const category = document.getElementById('flowCategoryInput').value.trim() || 'Geral';
+            const observation = document.getElementById('flowObsInput').value.trim();
+            const isEditing = document.getElementById('isEditingFlow').value === 'true';
+
+            if (!rawTitle) {
+                alert('Informe o nome do cenário!');
+                return;
+            }
+
+            if (isEditing) {
+                const flow = flows.find(f => f.id === currentFlowId);
+                flow.title = rawTitle;
+                flow.category = category;
+                flow.observation = observation;
+                showToast('Cenário atualizado!');
+            } else {
+                const newId = 'flow-' + Date.now();
+                flows.push({
+                    id: newId,
+                    title: rawTitle,
+                    category,
+                    observation,
+                    steps: [
+                        {
+                            title: 'CONFIRMAÇÃO INICIAL',
+                            condition: 'Saudação padrão Sem Parar',
+                            speech: 'OI, TUDO BEM? EU SOU A DUDA, DA EQUIPE DO SEM PARAR. PRA GENTE SEGUIR, PRECISO QUE VOCÊ CONFIRME O SEU CPF OU CNPJ COMPLETO, POR FAVOR.'
+                        }
+                    ]
+                });
+                currentFlowId = newId;
+                showToast('Novo cenário criado na ordem!');
+            }
+
+            saveToStorage();
+            closeFlowModal();
+            renderAll();
+        }
+
+        function deleteCurrentFlow() {
+            if (flows.length <= 1) {
+                alert('Você precisa manter pelo menos 1 fluxo no dashboard.');
+                return;
+            }
+            if (confirm('Tem certeza que deseja excluir este cenário inteiro?')) {
+                flows = flows.filter(f => f.id !== currentFlowId);
+                currentFlowId = flows[0].id;
+                saveToStorage();
+                renderAll();
+                showToast('Cenário excluído.');
+            }
+        }
+
+        // EXPORTAR / IMPORTAR / RESETAR
+        function exportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(flows, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", "fluxos-bot-semparar.json");
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        flows = imported;
+                        currentFlowId = flows[0]?.id;
+                        saveToStorage();
+                        renderAll();
+                        showToast('Backup importado com sucesso!');
+                    }
+                } catch (err) {
+                    alert('Arquivo JSON inválido.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetDefaultData() {
+            if (confirm('Isso apagará suas edições locais e restaurará os 10 fluxos originais do PDF. Continuar?')) {
+                flows = JSON.parse(JSON.stringify(defaultFlows));
+                currentFlowId = flows[0].id;
+                saveToStorage();
+                renderAll();
+                showToast('Modelo original restaurado!');
+            }
+        }
+
+        renderAll();
+    </script>
+</body>
+</html>
