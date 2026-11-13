@@ -333,16 +333,58 @@
             {
                 id: 'pagamento-cartao-credito',
                 title: 'Pagamento com Cartão de Crédito',
-                category: 'Geral',
-                observation: 'Conteúdo das etapas pendente de preenchimento.',
-                steps: createPendingSteps(4)
+                category: 'Negociação',
+                observation: 'Quando o cliente solicitar pagamento via cartão de crédito, a Duda deverá apresentar a proposta à vista com desconto e a data de vencimento. Após o aceite, confirmar as condições, registrar o acordo e orientar o cliente sobre o pagamento pelo SuperApp Sem Parar, incluindo o passo a passo. Informar que, após a confirmação do pagamento, a TAG será desbloqueada em até 6 horas.\n\nPonto de atenção: A Duda não deve solicitar dados do cartão durante a conversa. O pagamento e a escolha das parcelas devem ser realizados exclusivamente pelo cliente no SuperApp Sem Parar. A mensalidade seguirá conforme o plano ativo.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação padrão Sem Parar',
+                        speech: 'Oi, tudo bem? Eu sou a Duda, da equipe do Sem Parar. Pra gente seguir, preciso que você confirme o seu CPF ou CNPJ completo, por favor.'
+                    },
+                    {
+                        title: 'OFERTA À VISTA – CARTÃO DE CRÉDITO',
+                        condition: 'Quando o cliente demonstrar interesse em pagar via cartão de crédito, apresentar o valor com desconto e a data de vencimento. Caso aceite, avançar para a confirmação do acordo. Caso recuse, retornar ao fluxo de negociação.',
+                        speech: 'O pagamento à vista, com desconto, fica em [VALOR], via cartão, até [DD/MM]. Podemos seguir com essa condição?'
+                    },
+                    {
+                        title: 'CONFIRMAÇÃO DO ACORDO – CARTÃO DE CRÉDITO',
+                        condition: 'Após o aceite do cliente, registrar o acordo e avançar para a orientação de pagamento. Caso não aceite, retornar ao fluxo de negociação.',
+                        speech: 'Vou registrar o acordo no cartão de crédito, com vencimento em [DD/MM]. O pagamento e a escolha das parcelas são feitos pelo SuperApp Sem Parar. Posso registrar o acordo nessas condições?'
+                    },
+                    {
+                        title: 'FORMALIZAÇÃO E ORIENTAÇÃO DE PAGAMENTO',
+                        condition: 'Após a formalização do acordo, apresentar as instruções para pagamento pelo SuperApp. Orientar o cliente sobre a conferência dos dados e informar o prazo de desbloqueio da TAG após a confirmação do pagamento.',
+                        speech: 'Pronto! Seu acordo foi formalizado com sucesso no valor de [VALOR], com vencimento em [DD/MM].\n\nPara realizar o pagamento pelo SuperApp Sem Parar:\n\n1º - Abra o SuperApp Sem Parar.\n2º - Faça login na sua conta.\n3º - Acesse o menu Pagamentos.\n4º - Selecione a fatura referente ao acordo.\n5º - Escolha Cartão de Crédito.\n6º - Informe os dados do cartão e confirme se o beneficiário aparece como SEM PARAR INSTITUIÇÃO DE PAGAMENTO LTDA e se os dados do acordo estão corretos.\n7º - Finalize o pagamento.\n\nApós a confirmação do pagamento, sua TAG será desbloqueada em até 6 horas e estará pronta para uso. A cobrança da mensalidade seguirá conforme o plano ativo em sua conta.\n\nPara mais informações, acesse o SuperApp Sem Parar ou entre em contato pelo telefone 0800 888 6166.'
+                    }
+                ]
             },
             {
                 id: 'pagamento-boleto',
                 title: 'Pagamento via Boleto',
-                category: 'Geral',
-                observation: 'Conteúdo das etapas pendente de preenchimento.',
-                steps: createPendingSteps(4)
+                category: 'Negociação',
+                observation: 'Quando o cliente solicitar pagamento via boleto, a Duda deverá apresentar o valor da proposta à vista com desconto e a data de vencimento. Após o aceite, confirmar as condições e solicitar a segunda confirmação para registrar o acordo. Após a formalização, disponibilizar o código de barras ou a linha digitável do boleto e orientar o cliente sobre a conferência dos dados do beneficiário e do pagamento. Informar que a TAG será desbloqueada em até 2 dias após a confirmação do pagamento.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação padrão Sem Parar',
+                        speech: 'Oi, tudo bem? Eu sou a Duda, da equipe do Sem Parar. Pra gente seguir, preciso que você confirme o seu CPF ou CNPJ completo, por favor.'
+                    },
+                    {
+                        title: 'OFERTA À VISTA – BOLETO',
+                        condition: 'Quando o cliente solicitar pagamento via boleto, apresentar o valor da proposta com desconto e a data de vencimento. Caso aceite, avançar para a segunda confirmação. Caso recuse, retornar ao fluxo de negociação.',
+                        speech: 'O pagamento à vista, com desconto, fica em [VALOR], via boleto, até [DD/MM]. Podemos seguir com essa condição?'
+                    },
+                    {
+                        title: 'CONFIRMAÇÃO DO ACORDO – BOLETO',
+                        condition: 'Solicitar uma segunda confirmação do cliente antes de registrar o acordo. Após o aceite, avançar para a formalização. Caso não aceite, retornar ao fluxo de negociação, sem formalizar o acordo.',
+                        speech: 'Combinado. Vou registrar o acordo à vista, no valor de [VALOR], com vencimento em [DD/MM], no boleto. Posso registrar o acordo nessas condições?'
+                    },
+                    {
+                        title: 'ACORDO FORMALIZADO – BOLETO',
+                        condition: 'Após a segunda confirmação positiva, formalizar o acordo, disponibilizar o código de barras ou a linha digitável e orientar sobre as condições de pagamento. Informar o prazo de desbloqueio da TAG de até 2 dias após a confirmação do pagamento.',
+                        speech: 'Acordo realizado, você consegue copiar o código de barras pelo botão abaixo.\n\nPronto! Seu acordo foi formalizado com sucesso no valor de [VALOR], com vencimento em [DD/MM].\n\nAntes de finalizar o pagamento, confira se o beneficiário é SEM PARAR INSTITUIÇÃO DE PAGAMENTO LTDA e verifique se todos os dados apresentados estão corretos.\n\nA sua TAG será desbloqueada em até 2 dias após a confirmação do pagamento, juntamente com a cobrança da mensalidade ativa, conforme o seu plano.\n\n🚨 Atenção: pague usando a linha digitável do boleto enviado ou pelo SuperApp Sem Parar. Não realize transferência direta para o CNPJ informado, pois isso poderá impedir a identificação automática do pagamento.'
+                    }
+                ]
             },
             {
                 id: 'preventivo',
@@ -636,7 +678,9 @@
                     const pendingStepCount = {
                         'oferta-data-vencimento': 6,
                         'recusa-negociacao': 5,
-                        'mensagens-fora-contexto': 5
+                        'mensagens-fora-contexto': 5,
+                        'pagamento-cartao-credito': 4,
+                        'pagamento-boleto': 4
                     }[defaultFlow.id];
                     const isPendingScenario = pendingStepCount
                         && existingFlow.observation === 'Conteúdo das etapas pendente de preenchimento.'
