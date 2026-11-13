@@ -267,9 +267,40 @@
             {
                 id: 'oferta-data-vencimento',
                 title: 'Oferta de Data de Vencimento',
-                category: 'Geral',
-                observation: 'Conteúdo das etapas pendente de preenchimento.',
-                steps: createPendingSteps(6)
+                category: 'Negociação',
+                observation: 'A Duda deve apresentar inicialmente a data de vencimento da proposta como D+1 (um dia após a data atual). Caso o cliente informe que não consegue realizar o pagamento nessa data, deverá oferecer outras datas disponíveis no sistema. Se o cliente solicitar uma data específica, a assistente deverá verificar sua disponibilidade e, caso não esteja habilitada, informar as alternativas permitidas, respeitando o período disponível para negociação. Após a escolha do cliente, deverá confirmar a data selecionada e prosseguir com a formalização do acordo.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação padrão Sem Parar',
+                        speech: 'Oi, tudo bem? Eu sou a Duda, da equipe do Sem Parar. Pra gente seguir, preciso que você confirme o seu CPF ou CNPJ completo, por favor.'
+                    },
+                    {
+                        title: 'APRESENTAÇÃO DA DATA INICIAL',
+                        condition: 'Após apresentar a data D+1, aguardar a confirmação do cliente. Se aceitar, prosseguir com a formalização. Se informar que não consegue pagar nessa data, avançar para a oferta de uma nova data.',
+                        speech: 'O vencimento da sua proposta é [DD/MM].'
+                    },
+                    {
+                        title: 'CLIENTE NÃO CONSEGUE PAGAR NA DATA OFERTADA',
+                        condition: 'Quando o cliente informar que não consegue realizar o pagamento na data inicial (D-1), a Duda deverá oferecer uma nova data correspondente a D+3. Se o cliente aceitar, avançar para a confirmação do vencimento. Caso não aceite, aguardar uma contraproposta de data e verificar se está dentro do período permitido pelo sistema.',
+                        speech: 'Entendi! Posso oferecer o pagamento para [DD/MM]. Essa data funciona para você?'
+                    },
+                    {
+                        title: 'CLIENTE SOLICITA OUTRA DATA',
+                        condition: 'Consultar se a data solicitada pelo cliente está dentro do prazo permitido para negociação (D+5). Se estiver disponível, confirmar a data. Caso contrário, informar que não é possível selecionar essa data e avançar para a apresentação das alternativas disponíveis.',
+                        speech: 'Entendi, mas o dia [DD/MM] não está disponível. Você pode escolher entre [DATA_INICIAL] e [DATA_FINAL]. Fechando hoje, o valor de [VALOR] tem desconto aplicado, e o pagamento restabelece seu relacionamento com o Sem Parar. Qual dessas datas funciona melhor para você?'
+                    },
+                    {
+                        title: 'CLIENTE NÃO ACEITA AS DATAS DISPONÍVEIS',
+                        condition: 'Quando o cliente informar que não consegue realizar o pagamento nas datas disponíveis, apresentar as opções alternativas de pagamento por boleto ou cartão de crédito. Caso escolha uma das opções, direcionar para o fluxo correspondente. Caso não tenha interesse, avançar para a finalização.',
+                        speech: 'Também posso fazer essa proposta por boleto ou cartão de crédito. Qual forma de pagamento você prefere?'
+                    },
+                    {
+                        title: 'CLIENTE NÃO DESEJA NEGOCIAR',
+                        condition: 'Quando o cliente recusar as alternativas de pagamento e informar que não deseja prosseguir com a negociação, registrar a recusa e finalizar o atendimento, sem insistir em novas ofertas.',
+                        speech: 'Tudo bem. Vou registrar no sistema que você não quer fazer um acordo agora. Se mudar de ideia, é só falar com o Sem Parar pelos canais oficiais: 4002 1552 (capitais e regiões metropolitanas) ou 0800 015 02 52 (demais localidades), atendimento 24 horas. Até mais!'
+                    }
+                ]
             },
             {
                 id: 'acordo-parcelado',
@@ -543,11 +574,33 @@
         let flows = storedFlows || JSON.parse(JSON.stringify(defaultFlows));
 
         if (storedFlows) {
-            let addedDefaultFlows = false;
+            let updatedStoredFlows = false;
 
             defaultFlows.forEach((defaultFlow, index) => {
                 const matchesFlow = flow => flow.id === defaultFlow.id || flow.title === defaultFlow.title;
-                if (flows.some(matchesFlow)) return;
+                const existingFlowIndex = flows.findIndex(matchesFlow);
+                if (existingFlowIndex !== -1) {
+                    const existingFlow = flows[existingFlowIndex];
+                    const isPendingDateOffer = defaultFlow.id === 'oferta-data-vencimento'
+                        && existingFlow.observation === 'Conteúdo das etapas pendente de preenchimento.'
+                        && existingFlow.steps.length === 6
+                        && existingFlow.steps.every((step, stepIndex) =>
+                            step.title === `ETAPA ${stepIndex + 1} - CONTEÚDO PENDENTE`
+                            && step.condition === 'Conteúdo desta etapa pendente de definição.'
+                            && step.speech === 'Conteúdo pendente de preenchimento.'
+                        );
+
+                    if (isPendingDateOffer) {
+                        flows[existingFlowIndex] = {
+                            ...existingFlow,
+                            category: defaultFlow.category,
+                            observation: defaultFlow.observation,
+                            steps: JSON.parse(JSON.stringify(defaultFlow.steps))
+                        };
+                        updatedStoredFlows = true;
+                    }
+                    return;
+                }
 
                 const nextDefaultFlow = defaultFlows.slice(index + 1).find(nextFlow =>
                     flows.some(flow => flow.id === nextFlow.id || flow.title === nextFlow.title)
@@ -557,10 +610,10 @@
                     : flows.length;
 
                 flows.splice(insertIndex, 0, JSON.parse(JSON.stringify(defaultFlow)));
-                addedDefaultFlows = true;
+                updatedStoredFlows = true;
             });
 
-            if (addedDefaultFlows) {
+            if (updatedStoredFlows) {
                 localStorage.setItem('semparar_bot_flows', JSON.stringify(flows));
             }
         }
