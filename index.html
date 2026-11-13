@@ -64,7 +64,7 @@
                 <i class="fas fa-upload"></i> Importar
                 <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
             </label>
-            <button onclick="resetDefaultData()" class="hover:text-rose-400" title="Restaurar modelo original do PDF">
+            <button onclick="resetDefaultData()" class="hover:text-rose-400" title="Restaurar os cenários padrão do dashboard">
                 <i class="fas fa-undo"></i> Resetar
             </button>
         </div>
@@ -199,7 +199,43 @@
     </div>
 
     <script>
+        function createPendingSteps(count) {
+            return Array.from({ length: count }, (_, index) => ({
+                title: `ETAPA ${index + 1} - CONTEÚDO PENDENTE`,
+                condition: 'Conteúdo desta etapa pendente de definição.',
+                speech: 'Conteúdo pendente de preenchimento.'
+            }));
+        }
+
         const defaultFlows = [
+            {
+                id: 'cpf-incorreto',
+                title: 'CPF Incorreto',
+                category: 'Validação de Dados',
+                observation: 'Caso o cliente informe o CPF incorretamente, solicitar a confirmação novamente, totalizando até 3 tentativas. Se o CPF for validado em qualquer uma delas, avançar para a apresentação da dívida. Caso permaneça incorreto após a terceira tentativa, finalizar o atendimento.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação padrão Sem Parar',
+                        speech: 'Oi, tudo bem? Eu sou a Duda, da equipe do Sem Parar. Pra gente seguir, preciso que você confirme o seu CPF ou CNPJ completo, por favor.'
+                    },
+                    {
+                        title: '1ª TENTATIVA',
+                        condition: 'CPF inválido. Solicitar que o cliente confira e informe novamente.',
+                        speech: 'O número que você enviou parece incompleto: o CPF tem 11 números e o CNPJ tem 14. Pode me enviar o documento completo, só com os números?'
+                    },
+                    {
+                        title: '2ª TENTATIVA',
+                        condition: 'CPF continua inválido. Reforçar a solicitação de correção.',
+                        speech: 'O número ainda parece incompleto: o CPF tem 11 números e o CNPJ tem 14. Confira e me envie o documento completo, só com os números.'
+                    },
+                    {
+                        title: '3ª TENTATIVA',
+                        condition: 'CPF permanece inválido. Encerrar a tentativa de validação e direcionar para o fluxo de atendimento previsto para CPF não validado',
+                        speech: 'Ainda não consegui identificar o seu documento. Vou encerrar o contato por aqui, mas você pode nos chamar novamente ou falar com o Sem Parar pelo SuperApp. Até mais!'
+                    }
+                ]
+            },
             {
                 id: 'acordo-vista',
                 title: 'Acordo à Vista',
@@ -227,6 +263,13 @@
                         speech: 'PRONTO! SEU ACORDO FOI FORMALIZADO COM SUCESSO NO VALOR DE R$ [VALOR], COM VENCIMENTO EM [DD/MM].\n\nANTES DE FINALIZAR O PAGAMENTO, CONFIRA SE O BENEFICIÁRIO É SEM PARAR INSTITUIÇÃO DE PAGAMENTO LTDA E VERIFIQUE SE TODOS OS DADOS APRESENTADOS ESTÃO CORRETOS.\n\nA SUA TAG SERÁ DESBLOQUEADA EM ATÉ 3 HORAS APÓS A CONFIRMAÇÃO DO PAGAMENTO, JUNTAMENTE COM A COBRANÇA DA MENSALIDADE ATIVA, CONFORME O SEU PLANO.\n\nATENÇÃO: UTILIZE O BOTÃO "COPIA E COLA" ENVIADO ABAIXO OU REALIZE O PAGAMENTO PELO SUPERAPP SEM PARAR. NÃO REALIZE TRANSFERÊNCIA DIRETA PARA O CNPJ INFORMADO, POIS ISSO PODERÁ IMPEDIR A IDENTIFICAÇÃO AUTOMÁTICA DO PAGAMENTO.'
                     }
                 ]
+            },
+            {
+                id: 'oferta-data-vencimento',
+                title: 'Oferta de Data de Vencimento',
+                category: 'Geral',
+                observation: 'Conteúdo das etapas pendente de preenchimento.',
+                steps: createPendingSteps(6)
             },
             {
                 id: 'acordo-parcelado',
@@ -257,6 +300,20 @@
                 ]
             },
             {
+                id: 'pagamento-cartao-credito',
+                title: 'Pagamento com Cartão de Crédito',
+                category: 'Geral',
+                observation: 'Conteúdo das etapas pendente de preenchimento.',
+                steps: createPendingSteps(4)
+            },
+            {
+                id: 'pagamento-boleto',
+                title: 'Pagamento via Boleto',
+                category: 'Geral',
+                observation: 'Conteúdo das etapas pendente de preenchimento.',
+                steps: createPendingSteps(4)
+            },
+            {
                 id: 'preventivo',
                 title: 'Preventivo (Acordo Vigente)',
                 category: 'Preventivo / Acordo',
@@ -283,6 +340,13 @@
                         speech: 'PRONTO! ENVIEI OS DADOS PARA PAGAMENTO DO SEU ACORDO.\n\nATENÇÃO: UTILIZE O BOTÃO "COPIA E COLA" ENVIADO OU REALIZE O PAGAMENTO PELO SUPERAPP SEM PARAR. NÃO REALIZE TRANSFERÊNCIA DIRETA PARA O CNPJ INFORMADO, POIS ISSO PODERÁ IMPEDIR A IDENTIFICAÇÃO AUTOMÁTICA DO PAGAMENTO.\n\nA SUA TAG SERÁ DESBLOQUEADA EM ATÉ 3 HORAS APÓS A CONFIRMAÇÃO DO PAGAMENTO, JUNTAMENTE COM A COBRANÇA DA MENSALIDADE ATIVA, CONFORME O SEU PLANO.\n\nCONFIRA SE O BENEFICIÁRIO É SEM PARAR INSTITUIÇÃO DE PAGAMENTO LTDA ANTES DE PAGAR. ATÉ MAIS!'
                     }
                 ]
+            },
+            {
+                id: 'recusa-negociacao',
+                title: 'Recusa de Negociação',
+                category: 'Geral',
+                observation: 'Conteúdo das etapas pendente de preenchimento.',
+                steps: createPendingSteps(5)
             },
             {
                 id: 'quebra-acordo',
@@ -464,11 +528,43 @@
                         speech: 'ENTENDO QUE VOCÊ NÃO RECONHECE ESSA FATURA EM ABERTO. VOU ENCAMINHAR SEU ATENDIMENTO PARA UMA PESSOA DA EQUIPE VERIFICAR ESSA COBRANÇA COM VOCÊ.\n\nOLÁ! TUDO BEM? VOCÊ ESTÁ NA FILA DE ESPERA PARA ATENDIMENTO. POR FAVOR, AGUARDE UM MOMENTO E LOGO ESTAREMOS COM VOCÊ.'
                     }
                 ]
+            },
+            {
+                id: 'mensagens-fora-contexto',
+                title: 'Tratamento de Mensagens Fora do Contexto',
+                category: 'Geral',
+                observation: 'Conteúdo das etapas pendente de preenchimento.',
+                steps: createPendingSteps(5)
             }
         ];
 
         // ESTADO DA APLICAÇÃO
-        let flows = JSON.parse(localStorage.getItem('semparar_bot_flows')) || defaultFlows;
+        const storedFlows = JSON.parse(localStorage.getItem('semparar_bot_flows'));
+        let flows = storedFlows || JSON.parse(JSON.stringify(defaultFlows));
+
+        if (storedFlows) {
+            let addedDefaultFlows = false;
+
+            defaultFlows.forEach((defaultFlow, index) => {
+                const matchesFlow = flow => flow.id === defaultFlow.id || flow.title === defaultFlow.title;
+                if (flows.some(matchesFlow)) return;
+
+                const nextDefaultFlow = defaultFlows.slice(index + 1).find(nextFlow =>
+                    flows.some(flow => flow.id === nextFlow.id || flow.title === nextFlow.title)
+                );
+                const insertIndex = nextDefaultFlow
+                    ? flows.findIndex(flow => flow.id === nextDefaultFlow.id || flow.title === nextDefaultFlow.title)
+                    : flows.length;
+
+                flows.splice(insertIndex, 0, JSON.parse(JSON.stringify(defaultFlow)));
+                addedDefaultFlows = true;
+            });
+
+            if (addedDefaultFlows) {
+                localStorage.setItem('semparar_bot_flows', JSON.stringify(flows));
+            }
+        }
+
         let currentFlowId = flows[0]?.id || null;
 
         function saveToStorage() {
@@ -801,12 +897,12 @@
         }
 
         function resetDefaultData() {
-            if (confirm('Isso apagará suas edições locais e restaurará os 10 fluxos originais do PDF. Continuar?')) {
+            if (confirm('Isso apagará suas edições locais e restaurará os 16 cenários padrão do dashboard. O conteúdo de alguns cenários está pendente. Continuar?')) {
                 flows = JSON.parse(JSON.stringify(defaultFlows));
                 currentFlowId = flows[0].id;
                 saveToStorage();
                 renderAll();
-                showToast('Modelo original restaurado!');
+                showToast('Cenários padrão restaurados!');
             }
         }
 
