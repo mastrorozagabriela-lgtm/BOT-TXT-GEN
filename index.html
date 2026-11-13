@@ -375,9 +375,35 @@
             {
                 id: 'recusa-negociacao',
                 title: 'Recusa de Negociação',
-                category: 'Geral',
-                observation: 'Conteúdo das etapas pendente de preenchimento.',
-                steps: createPendingSteps(5)
+                category: 'Negociação',
+                observation: 'Quando o cliente recusar uma negociação, a Duda deverá verificar se há interesse em outra condição, realizando até 3 tentativas. Caso mantenha a recusa após as três tentativas, deverá registrar a recusa no sistema, informar os canais oficiais do Sem Parar e encerrar o atendimento cordialmente, sem insistir em novas ofertas.\n\nImportante: contabilizar cada recusa efetiva. Se o cliente aceitar qualquer condição durante as tentativas, interromper a contagem e direcioná-lo ao fluxo de negociação correspondente.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação padrão Sem Parar',
+                        speech: 'Oi, tudo bem? Eu sou a Duda, da equipe do Sem Parar. Pra gente seguir, preciso que você confirme o seu CPF ou CNPJ completo, por favor.'
+                    },
+                    {
+                        title: 'PRIMEIRA RECUSA - BENEFÍCIOS SEM PARAR',
+                        condition: 'Quando o cliente recusar a primeira oferta de acordo, apresentar os benefícios do Sem Parar e perguntar novamente se deseja conhecer a condição de regularização. Caso aceite, retornar à etapa de apresentação da proposta. Caso recuse novamente, avançar para a segunda tentativa de negociação.',
+                        speech: 'Entendo. Regularizar a fatura em aberto também ajuda a manter o acesso aos benefícios do Sem Parar:\n\n🚗 Pedágios: passe pelas rodovias com mais comodidade, sem precisar parar para pagar.\n\n🅿️ Estacionamentos: mais facilidade e agilidade ao acessar estacionamentos parceiros.\n\n⛽ Abastecimento: use o Sem Parar em postos parceiros e torne seus pagamentos mais simples.\n\nPosso te mostrar de novo a condição para regularizar a sua fatura?'
+                    },
+                    {
+                        title: 'SEGUNDA RECUSA - REFORÇO DOS BENEFÍCIOS',
+                        condition: 'Quando o cliente recusar novamente a proposta, apresentar os demais benefícios do Sem Parar e realizar uma nova tentativa de negociação. Caso aceite, retornar à apresentação da proposta. Caso apresente a terceira recusa, avançar para a oferta de parcelamento.',
+                        speech: '🍔 Drive-thru: mais praticidade e rapidez em estabelecimentos parceiros.\n\n🧼 Lava-rápidos: pagamento direto pela TAG, sem dinheiro ou cartão.\n\n🛣️ Mobilidade completa: diversas soluções em um único serviço, mais conforto no dia a dia.\n\nPosso te mostrar de novo a condição para regularizar a sua fatura?'
+                    },
+                    {
+                        title: 'TERCEIRA RECUSA - OFERTA DE PARCELAMENTO',
+                        condition: 'Quando o cliente recusar a terceira tentativa de negociação à vista, apresentar a opção de parcelamento disponível no sistema. Caso aceite, avançar para a formalização do acordo. Caso recuse novamente, avançar para a finalização do atendimento.',
+                        speech: 'Para pagamento em [QUANTIDADE_PARCELAS] parcelas, a entrada fica em [VALOR_ENTRADA], com vencimento em [DD/MM], e as [QUANTIDADE_PARCELAS_RESTANTES] parcelas seguintes ficam em [VALOR_PARCELA] cada, nos meses seguintes, totalizando [VALOR_TOTAL]. O pagamento será no PIX. Podemos seguir com essa condição?'
+                    },
+                    {
+                        title: 'QUARTA RECUSA - FINALIZAÇÃO DO ATENDIMENTO',
+                        condition: 'Quando o cliente recusar também a oferta de parcelamento, registrar a recusa no sistema e finalizar o atendimento, sem apresentar novas ofertas ou insistir na negociação.',
+                        speech: 'Tudo bem. Vou registrar no sistema que você não quer fazer um acordo agora. Se mudar de ideia, é só falar com o Sem Parar pelos canais oficiais: 4002 1552 (capitais e regiões metropolitanas) ou 0800 015 02 52 (demais localidades), atendimento 24 horas. Até mais!'
+                    }
+                ]
             },
             {
                 id: 'quebra-acordo',
@@ -581,16 +607,20 @@
                 const existingFlowIndex = flows.findIndex(matchesFlow);
                 if (existingFlowIndex !== -1) {
                     const existingFlow = flows[existingFlowIndex];
-                    const isPendingDateOffer = defaultFlow.id === 'oferta-data-vencimento'
+                    const pendingStepCount = {
+                        'oferta-data-vencimento': 6,
+                        'recusa-negociacao': 5
+                    }[defaultFlow.id];
+                    const isPendingScenario = pendingStepCount
                         && existingFlow.observation === 'Conteúdo das etapas pendente de preenchimento.'
-                        && existingFlow.steps.length === 6
+                        && existingFlow.steps.length === pendingStepCount
                         && existingFlow.steps.every((step, stepIndex) =>
                             step.title === `ETAPA ${stepIndex + 1} - CONTEÚDO PENDENTE`
                             && step.condition === 'Conteúdo desta etapa pendente de definição.'
                             && step.speech === 'Conteúdo pendente de preenchimento.'
                         );
 
-                    if (isPendingDateOffer) {
+                    if (isPendingScenario) {
                         flows[existingFlowIndex] = {
                             ...existingFlow,
                             category: defaultFlow.category,
