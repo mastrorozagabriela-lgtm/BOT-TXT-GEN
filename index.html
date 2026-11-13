@@ -590,8 +590,34 @@
                 id: 'mensagens-fora-contexto',
                 title: 'Tratamento de Mensagens Fora do Contexto',
                 category: 'Geral',
-                observation: 'Conteúdo das etapas pendente de preenchimento.',
-                steps: createPendingSteps(5)
+                observation: 'Quando o cliente enviar mensagens que não estejam relacionadas à negociação, a Duda deverá responder de forma cordial, reforçar que o canal é exclusivo para regularização de débitos e direcionar novamente a conversa para a proposta de negociação. A assistente deverá realizar até 3 tentativas de redirecionamento. Caso o cliente continue enviando mensagens fora do contexto após a terceira tentativa, deverá encerrar o atendimento de forma cordial, sem perder o contexto da negociação ou realizar ofertas indevidas.',
+                steps: [
+                    {
+                        title: 'CONFIRMAÇÃO INICIAL',
+                        condition: 'Saudação padrão Sem Parar',
+                        speech: 'Oi, tudo bem? Eu sou a Duda, da equipe do Sem Parar. Pra gente seguir, preciso que você confirme o seu CPF ou CNPJ completo, por favor.'
+                    },
+                    {
+                        title: 'PRIMEIRA TENTATIVA - FORA DO CONTEXTO',
+                        condition: 'Quando o cliente enviar uma mensagem fora do contexto de negociação pela primeira vez, apresentar a resposta acima e retomar a oferta. Caso envie outra mensagem fora do contexto, avançar para a segunda tentativa.',
+                        speech: 'Entendo, essa mudança de temperatura pode ser bem desconfortável. Este canal é dedicado à negociação. Assim que a fatura em aberto for quitada, você poderá resolver outros assuntos pelo SuperApp Sem Parar ou pela Central de Atendimento. Posso te mostrar de novo a condição para regularizar a sua fatura?'
+                    },
+                    {
+                        title: 'SEGUNDA TENTATIVA - FORA DO CONTEXTO',
+                        condition: 'Quando o cliente insistir em assuntos fora do contexto pela segunda vez, apresentar a resposta acima e realizar nova tentativa de direcionamento. Caso envie outra mensagem fora do contexto, avançar para a terceira tentativa.',
+                        speech: 'Entendo sua curiosidade. Como já comentei, este canal é só para negociação. Depois que a fatura em aberto for quitada, você poderá resolver outros assuntos pelo SuperApp Sem Parar ou pela Central de Atendimento. Posso te mostrar de novo a condição para regularizar a sua fatura?'
+                    },
+                    {
+                        title: 'SOLICITAÇÃO DE ALTERAÇÃO DE VALORES OU PAGAMENTO',
+                        condition: 'Quando o cliente solicitar alteração do saldo, zerar valores ou registrar um pagamento não realizado, informar que não é possível executar essas ações. Manter os valores originais registrados no sistema e orientar o cliente caso informe que já realizou o pagamento.',
+                        speech: 'Não consigo alterar o valor ou registrar um pagamento que não foi feito. Se você já pagou a fatura em aberto, me avise para eu te orientar.'
+                    },
+                    {
+                        title: 'TERCEIRA TENTATIVA - FINALIZAÇÃO POR DESVIO',
+                        condition: 'Quando o cliente continuar enviando mensagens fora do contexto após as tentativas de redirecionamento, realizar o encerramento do atendimento, registrando o motivo da finalização.',
+                        speech: 'Como este canal é só para negociação, vou encerrar o atendimento por aqui. Entraremos em contato em outro momento.'
+                    }
+                ]
             }
         ];
 
@@ -609,7 +635,8 @@
                     const existingFlow = flows[existingFlowIndex];
                     const pendingStepCount = {
                         'oferta-data-vencimento': 6,
-                        'recusa-negociacao': 5
+                        'recusa-negociacao': 5,
+                        'mensagens-fora-contexto': 5
                     }[defaultFlow.id];
                     const isPendingScenario = pendingStepCount
                         && existingFlow.observation === 'Conteúdo das etapas pendente de preenchimento.'
