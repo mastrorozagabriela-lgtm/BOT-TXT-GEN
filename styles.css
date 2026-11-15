@@ -12,3 +12,84 @@
             z-index: 0;
         }
         .flow-step:last-child .flow-connector::before { display: none; }
+
+        @media (max-width: 1023px) {
+            body > aside.w-80 {
+                width: 16rem;
+            }
+
+            #mainHeader {
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
+            }
+
+            body > main > div.flex-1 {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 767px) {
+            body.h-screen {
+                height: auto;
+                min-height: 100vh;
+                min-height: 100dvh;
+                flex-direction: column;
+                overflow: visible;
+            }
+
+            body.h-screen > aside {
+                width: 100%;
+                height: 40vh;
+                height: 40dvh;
+                min-height: 15rem;
+                max-height: 20rem;
+                flex-shrink: 0;
+            }
+
+            #flowList {
+                min-height: 0;
+            }
+
+            body.h-screen > main {
+                min-height: 60vh;
+                overflow: visible;
+            }
+
+            #mainHeader {
+                padding: 1rem;
+            }
+
+            #flowTitle {
+                font-size: 1.375rem;
+                line-height: 1.35;
+            }
+
+            body.h-screen > main > div {
+                flex: 1 0 auto;
+                overflow: visible;
+                padding: 1rem;
+            }
+
+            body.h-screen > main > div > div {
+                max-width: 100%;
+            }
+
+            .flow-step {
+                gap: 0.75rem;
+            }
+
+            .flow-step > div:last-child {
+                min-width: 0;
+            }
+
+            .flow-step h3,
+            .flow-step p,
+            .flow-step .leading-relaxed,
+            #observationText {
+                overflow-wrap: anywhere;
+            }
+
+            #toast {
+                max-width: calc(100vw - 2rem);
+            }
+        }
