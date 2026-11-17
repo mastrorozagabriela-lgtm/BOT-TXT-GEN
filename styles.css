@@ -13,6 +13,67 @@
         }
         .flow-step:last-child .flow-connector::before { display: none; }
 
+        /* ========================================================
+           CUSTOM SCROLLBARS (Harmonizados com a paleta Slate)
+           ======================================================== */
+        /* Scrollbar do Aside (#flowList) */
+        #flowList::-webkit-scrollbar,
+        aside::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #flowList::-webkit-scrollbar-track,
+        aside::-webkit-scrollbar-track {
+            background-color: #0f172a; /* Slate 900 (tom exato do background do aside) */
+        }
+
+        #flowList::-webkit-scrollbar-thumb,
+        aside::-webkit-scrollbar-thumb {
+            background-color: #334155; /* Slate 700 (tom elegante para o indicador) */
+            border-radius: 9999px;
+            border: 1px solid #0f172a; /* Espaçamento interno com a cor de fundo */
+        }
+
+        #flowList::-webkit-scrollbar-thumb:hover,
+        aside::-webkit-scrollbar-thumb:hover {
+            background-color: #475569; /* Slate 600 (destaque suave ao passar o cursor) */
+        }
+
+        #flowList::-webkit-scrollbar-thumb:active,
+        aside::-webkit-scrollbar-thumb:active {
+            background-color: #64748b; /* Slate 500 (ao arrastar) */
+        }
+
+        /* Compatibilidade padrão (Firefox e navegadores modernos) */
+        #flowList,
+        aside {
+            scrollbar-width: thin;
+            scrollbar-color: #334155 #0f172a;
+        }
+
+        /* Scrollbar da área principal (limpa e discreta) */
+        main .overflow-y-auto::-webkit-scrollbar {
+            width: 7px;
+        }
+
+        main .overflow-y-auto::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        main .overflow-y-auto::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1; /* Slate 300 */
+            border-radius: 9999px;
+        }
+
+        main .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+            background-color: #94a3b8; /* Slate 400 */
+        }
+
+        main .overflow-y-auto {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+
         @media (max-width: 1023px) {
             body > aside.w-80 {
                 width: 16rem;
@@ -91,5 +152,108 @@
 
             #toast {
                 max-width: calc(100vw - 2rem);
+            }
+        }
+
+        /* Rodapé do Aside e Botão de Exportação */
+        .aside-footer {
+            padding: 0.5rem;
+            border-top: 1px solid #1e293b;
+        }
+
+        #btnExportPdf {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1rem;
+            background-color: #e11d48;
+            color: #ffffff;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        #btnExportPdf:hover {
+            background-color: #be123c;
+        }
+
+        #btnExportPdf:active {
+            transform: scale(0.98);
+        }
+
+        /* Modo de Exportação para PDF (aplicado temporariamente pelo JS durante o download) */
+        body.exporting-pdf {
+            overflow: visible !important;
+            height: auto !important;
+            background-color: #f8fafc !important;
+        }
+
+        body.exporting-pdf aside {
+            display: none !important;
+        }
+
+        body.exporting-pdf main {
+            width: 820px !important;
+            max-width: 820px !important;
+            min-width: 820px !important;
+            margin: 0 auto !important;
+            height: auto !important;
+            overflow: visible !important;
+            background-color: #f8fafc !important;
+            box-shadow: none !important;
+        }
+
+        body.exporting-pdf main > div {
+            height: auto !important;
+            overflow: visible !important;
+            padding: 1.5rem !important;
+        }
+
+        body.exporting-pdf main button {
+            display: none !important;
+        }
+
+        body.exporting-pdf .flow-step {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-bottom: 1.5rem !important;
+        }
+
+        /* Estilos nativos para impressão / Salvar como PDF (@media print) */
+        @media print {
+            body {
+                overflow: visible !important;
+                height: auto !important;
+                background-color: #ffffff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            aside, #toast, #btnExportPdf, button {
+                display: none !important;
+            }
+
+            main {
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+            main > div {
+                overflow: visible !important;
+                height: auto !important;
+                padding: 0 !important;
+            }
+
+            .flow-step {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                margin-bottom: 1.5rem !important;
             }
         }

@@ -546,7 +546,30 @@
                 if (matchTitle || matchSpeech) {
                     const isActive = flow.id === currentFlowId;
                     const btn = document.createElement('div');
-                    btn.onclick = () => { currentFlowId = flow.id; renderAll(); };
+                    btn.onclick = () => { currentFlowId = flow.id; function exportPdf() {
+  console.log('ExportPDF: início');
+  const element = document.querySelector('main');
+  if (!element) { console.error('Elemento main não encontrado'); return; }
+  const opt = {
+    margin: [10, 10, 10, 10],
+    filename: 'fluxo.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+  console.log('ExportPDF: chamando html2pdf');
+  html2pdf().set(opt).from(element).save()
+    .then(() => console.log('ExportPDF: concluído'))
+    .catch(err => console.error('Erro ao gerar PDF:', err));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btnExportPdf');
+  console.log('Botão encontrado?', !!btn);
+  if (btn) btn.addEventListener('click', exportPdf);
+});
+
+renderAll(); };
                     btn.className = `w-full cursor-pointer text-left px-3 py-2.5 rounded-lg text-sm transition flex items-center justify-between ${
                         isActive ? 'bg-rose-600 text-white font-semibold shadow' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                     }`;
@@ -637,6 +660,104 @@
             setTimeout(() => {
                 toast.classList.add('translate-y-20', 'opacity-0');
             }, 2500);
+        }
+
+        // EXPORTAÇÃO PARA PDF
+        async function exportPdf() {
+            if (typeof html2pdf === 'undefined') {
+                showToast('Erro: Biblioteca html2pdf não carregou. Verifique sua conexão com a internet.');
+                console.error('html2pdf não está definido no window.');
+                return;
+            }
+
+            const flowIndex = flows.findIndex(f => f.id === currentFlowId);
+            const flow = flows[flowIndex];
+            if (!flow) {
+                showToast('Nenhum fluxo selecionado para exportar.');
+                return;
+            }
+
+            const btn = document.getElementById('btnExportPdf');
+            const originalBtnHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Exportando...</span>';
+            }
+
+            const formattedTitle = getFormattedFlowTitle(flow, flowIndex);
+            const safeFileName = `${formattedTitle.replace(/[/\\?%*:|"<>]/g, '-').trim()}.pdf`;
+
+            showToast('Preparando PDF do fluxo...');
+
+            const mainElement = document.querySelector('main');
+            if (!mainElement) {
+                showToast('Erro: Área principal não encontrada.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnHtml;
+                }
+                return;
+            }
+
+            // Ativa o modo de exportação no DOM real:
+            // 1. O aside é ocultado temporariamente
+            // 2. O main é centralizado em (0,0) com largura A4 (820px)
+            // 3. O scroll é liberado para renderizar todas as etapas na íntegra
+            // 4. Os botões de copiar fala são omitidos do documento
+            document.body.classList.add('exporting-pdf');
+
+            const scrollContainer = mainElement.querySelector('.overflow-y-auto');
+            const prevScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+            if (scrollContainer) scrollContainer.scrollTop = 0;
+
+            const opt = {
+                margin: [10, 10, 10, 10], // mm
+                filename: safeFileName,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    scrollY: 0,
+                    scrollX: 0
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            try {
+                // Aguarda 100ms para o navegador concluir o reflow do modo de exportação
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                await html2pdf().set(opt).from(mainElement).save();
+                showToast('PDF exportado com sucesso!');
+            } catch (err) {
+                console.error('Erro ao gerar PDF com html2pdf:', err);
+                showToast('Falha na geração direta. Abrindo janela de impressão...');
+                window.print();
+            } finally {
+                // Restaura o estado original da tela imediatamente
+                document.body.classList.remove('exporting-pdf');
+                if (scrollContainer) scrollContainer.scrollTop = prevScrollTop;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnHtml;
+                }
+            }
+        }
+
+        // Inicialização do evento do botão de exportação
+        function initExportButton() {
+            const btn = document.getElementById('btnExportPdf');
+            if (btn) {
+                btn.addEventListener('click', exportPdf);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initExportButton);
+        } else {
+            initExportButton();
         }
 
         renderAll();
